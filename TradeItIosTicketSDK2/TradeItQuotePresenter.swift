@@ -1,19 +1,27 @@
 import UIKit
 
-class TradeItQuotePresenter: NSObject {
+@objc protocol TradeItQuoteProvider {
+    func getLastPriceLabelText() -> String
+    func getTimestampLabelText() -> String
+    func getLastPriceValue() -> NSDecimalNumber
+    func getChangeLabelText() -> String
+    func getChangeLabelColor() -> UIColor
+}
+
+@objc class TradeItQuotePresenter: NSObject, TradeItQuoteProvider {
     let tradeItQuote: TradeItQuote
     
     init(_ tradeItQuote: TradeItQuote) {
         self.tradeItQuote = tradeItQuote
     }
     
-    func getLastPriceLabel() -> String {
+    func getLastPriceLabelText() -> String {
         guard let lastPrice = self.tradeItQuote.lastPrice
             else { return TradeItPresenter.MISSING_DATA_PLACEHOLDER }
         return NumberFormatter.formatCurrency(lastPrice, currencyCode: TradeItPresenter.DEFAULT_CURRENCY_CODE)
     }
     
-    func getTimestampLabel() -> String {
+    func getTimestampLabelText() -> String {
         return self.tradeItQuote.dateTime ?? TradeItPresenter.MISSING_DATA_PLACEHOLDER
     }
     
@@ -23,7 +31,7 @@ class TradeItQuotePresenter: NSObject {
         return NSDecimalNumber(decimal: lastPrice.decimalValue)
     }
 
-    func getChangeLabel() -> String {
+    func getChangeLabelText() -> String {
         var changeValue = TradeItPresenter.MISSING_DATA_PLACEHOLDER
         var pctChangeValue = TradeItPresenter.MISSING_DATA_PLACEHOLDER
         
@@ -45,5 +53,4 @@ class TradeItQuotePresenter: NSObject {
             else { return UIColor.lightText }
         return TradeItPresenter.stockChangeColor(change.doubleValue)
     }
-
 }

@@ -3,11 +3,18 @@ import UIKit
 class TradeItYahooTradingUIFlow: NSObject, TradeItYahooTradingTicketViewControllerDelegate, TradeItYahooAccountSelectionViewControllerDelegate,
 TradeItYahooTradePreviewViewControllerDelegate {
 
-    let viewControllerProvider: TradeItViewControllerProvider = TradeItViewControllerProvider(storyboardName: "TradeItYahoo")
-    var order = TradeItOrder()
+    private let viewControllerProvider: TradeItViewControllerProvider = TradeItViewControllerProvider(storyboardName: "TradeItYahoo")
+    private var order = TradeItOrder()
+    public let quoteProvider: TradeItQuoteProvider
 
-    func presentTradingFlow(fromViewController viewController: UIViewController,
-                            withOrder order: TradeItOrder = TradeItOrder()) {
+    init(withQuoteProvider quoteProvider: TradeItQuoteProvider) {
+        self.quoteProvider = quoteProvider
+    }
+
+    func presentTradingFlow(
+        fromViewController viewController: UIViewController,
+        withOrder order: TradeItOrder = TradeItOrder()
+    ) {
         self.order = order
 
         let navController = UINavigationController()
@@ -46,8 +53,11 @@ TradeItYahooTradePreviewViewControllerDelegate {
         if let accountSelectionViewController = initialViewController as? TradeItYahooAccountSelectionViewController {
             accountSelectionViewController.delegate = self
         } else if let tradingTicketViewController = initialViewController as? TradeItYahooTradingTicketViewController {
-            tradingTicketViewController.delegate = self
-            tradingTicketViewController.order = order
+            tradingTicketViewController.configure(
+                order: order,
+                delegate: self,
+                quoteProvider: self.quoteProvider
+            )
         }
 
         return initialViewController
@@ -55,13 +65,18 @@ TradeItYahooTradePreviewViewControllerDelegate {
 
     // MARK: TradeItYahooAccountSelectionViewControllerDelegate
 
-    internal func accountSelectionViewController(_ accountSelectionViewController: TradeItYahooAccountSelectionViewController,
-                                                 didSelectLinkedBrokerAccount linkedBrokerAccount: TradeItLinkedBrokerAccount) {
+    internal func accountSelectionViewController(
+        _ accountSelectionViewController: TradeItYahooAccountSelectionViewController,
+        didSelectLinkedBrokerAccount linkedBrokerAccount: TradeItLinkedBrokerAccount
+    ) {
         self.order.linkedBrokerAccount = linkedBrokerAccount
 
         if let tradingTicketViewController = self.viewControllerProvider.provideViewController(forStoryboardId: TradeItStoryboardID.yahooTradingTicketView) as? TradeItYahooTradingTicketViewController {
-            tradingTicketViewController.delegate = self
-            tradingTicketViewController.order = order
+            tradingTicketViewController.configure(
+                order: order,
+                delegate: self,
+                quoteProvider: self.quoteProvider
+            )
             accountSelectionViewController.navigationController?.setViewControllers([tradingTicketViewController], animated: true)
         }
     }
@@ -71,13 +86,13 @@ TradeItYahooTradePreviewViewControllerDelegate {
     internal func orderSuccessfullyPreviewed(
         onTradingTicketViewController tradingTicketViewController: TradeItYahooTradingTicketViewController,
         withPreviewOrderResult previewOrderResult: TradeItPreviewOrderResult,
-        placeOrderCallback: @escaping TradeItPlaceOrderHandlers) {
-
+        placeOrderCallback: @escaping TradeItPlaceOrderHandlers
+    ) {
         let previewViewController = self.viewControllerProvider.provideViewController(forStoryboardId: TradeItStoryboardID.yahooTradingPreviewView) as? TradeItYahooTradePreviewViewController
 
         if let previewViewController = previewViewController {
             previewViewController.delegate = self
-            previewViewController.linkedBrokerAccount = tradingTicketViewController.order.linkedBrokerAccount
+            previewViewController.linkedBrokerAccount = self.order.linkedBrokerAccount // TODO: TEST THIS!
             previewViewController.previewOrderResult = previewOrderResult
             previewViewController.placeOrderCallback = placeOrderCallback
 

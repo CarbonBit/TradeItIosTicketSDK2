@@ -5,13 +5,14 @@ class TradeItYahooTradingTicketViewController: CloseableViewController, UITableV
     @IBOutlet weak var tableView: TradeItYahooTradingTicketTableView!
     @IBOutlet weak var reviewOrderButton: UIButton!
 
-    var alertManager = TradeItAlertManager()
-    let viewProvider = TradeItViewControllerProvider(storyboardName: "TradeItYahoo")
-    var selectionViewController: TradeItSelectionViewController!
-    var accountSelectionViewController: TradeItYahooAccountSelectionViewController!
-    var order = TradeItOrder()
-    public weak var delegate: TradeItYahooTradingTicketViewControllerDelegate?
+    private var alertManager = TradeItAlertManager()
+    private let viewProvider = TradeItViewControllerProvider(storyboardName: "TradeItYahoo")
+    private var selectionViewController: TradeItSelectionViewController!
+    private var accountSelectionViewController: TradeItYahooAccountSelectionViewController!
+    private var order = TradeItOrder()
+    private weak var delegate: TradeItYahooTradingTicketViewControllerDelegate?
 
+    private var quoteProvider: TradeItQuoteProvider?
     private var ticketRows = [TicketRow]()
 
     override func viewDidLoad() {
@@ -44,6 +45,18 @@ class TradeItYahooTradingTicketViewController: CloseableViewController, UITableV
         self.reloadTicket()
     }
 
+    public func configure(
+        order: TradeItOrder,
+        delegate: TradeItYahooTradingTicketViewControllerDelegate,
+        quoteProvider: TradeItQuoteProvider
+    ) {
+        self.order = order
+        self.delegate = delegate
+        self.quoteProvider = quoteProvider
+    }
+
+    // MARK: UITableViewDelegate
+
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let ticketRow = self.ticketRows[indexPath.row]
 
@@ -71,6 +84,23 @@ class TradeItYahooTradingTicketViewController: CloseableViewController, UITableV
         default:
             return
         }
+    }
+
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        struct StaticVars {
+            static var rowHeights = [String:CGFloat]()
+        }
+
+        let ticketRow = self.ticketRows[indexPath.row]
+
+        guard let height = StaticVars.rowHeights[ticketRow.cellReuseId] else {
+            let cell = tableView.dequeueReusableCell(withIdentifier: ticketRow.cellReuseId)
+            let height = cell?.bounds.size.height ?? tableView.rowHeight
+            StaticVars.rowHeights[ticketRow.cellReuseId] = height
+            return height
+        }
+
+        return height
     }
 
     // MARK: UITableViewDataSource
@@ -246,6 +276,7 @@ class TradeItYahooTradingTicketViewController: CloseableViewController, UITableV
             ticketRows.append(.stopPrice)
         }
 
+        ticketRows.append(.marketPrice)
         ticketRows.append(.estimatedCost)
 
         self.ticketRows = ticketRows
@@ -300,6 +331,9 @@ class TradeItYahooTradingTicketViewController: CloseableViewController, UITableV
                     self.setReviewButtonEnablement()
                 }
             )
+        case .marketPrice:
+            guard let marketCell = cell as? TradeItSubtitleWithDetailsCellTableViewCell else { return cell }
+            marketCell.configure(quoteProvider: self.quoteProvider)
         case .estimatedCost:
             var estimateChangeText = "N/A"
 
@@ -359,7 +393,7 @@ class TradeItYahooTradingTicketViewController: CloseableViewController, UITableV
         case expiration
         case limitPrice
         case stopPrice
-        //    case marketPrice // Market Price
+        case marketPrice
         case estimatedCost
 
         private enum CellReuseId: String {
@@ -367,6 +401,7 @@ class TradeItYahooTradingTicketViewController: CloseableViewController, UITableV
             case numericInput = "TRADING_TICKET_NUMERIC_INPUT_CELL_ID"
             case selection = "TRADING_TICKET_SELECTION_CELL_ID"
             case selectionDetail = "TRADING_TICKET_SELECTION_DETAIL_CELL_ID"
+            case marketData = "TRADING_TICKET_MARKET_DATA_CELL_ID"
         }
 
         var cellReuseId: String {
@@ -379,8 +414,8 @@ class TradeItYahooTradingTicketViewController: CloseableViewController, UITableV
                 cellReuseId = .numericInput
             case .orderType, .expiration:
                 cellReuseId = .selection
-                //        case .marketPrice:
-                //        // Market Price
+            case .marketPrice:
+                cellReuseId = .marketData
             case .account:
                 cellReuseId = .selectionDetail
             }
@@ -404,8 +439,8 @@ class TradeItYahooTradingTicketViewController: CloseableViewController, UITableV
                 return "Order Type"
             case .expiration:
                 return "Time in force"
-                //        case .marketPrice:
-                //        // Market Price
+            case .marketPrice:
+                return "Market price"
             case .account:
                 return "Accounts"
             }

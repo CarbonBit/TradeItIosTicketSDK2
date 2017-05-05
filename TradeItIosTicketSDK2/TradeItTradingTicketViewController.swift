@@ -54,6 +54,8 @@ class TradeItTradingTicketViewController: TradeItViewController, UITableViewData
         self.reloadTicket()
     }
 
+    // MARK: UITableViewDelegate
+
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let ticketRow = self.ticketRows[indexPath.row]
 
@@ -385,7 +387,7 @@ class TradeItTradingTicketViewController: TradeItViewController, UITableViewData
             )
         case .marketPrice:
             guard let marketCell = cell as? TradeItSubtitleWithDetailsCellTableViewCell else { return cell }
-            marketCell.configure(quotePresenter: self.quotePresenter)
+            marketCell.configure(quoteProvider: self.quotePresenter)
         case .estimatedCost:
             var estimateChangeText = "N/A"
 
